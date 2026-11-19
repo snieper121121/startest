@@ -45,9 +45,6 @@ jobs:
       matrix:
         include:
           - { abi: arm64-v8a, target: aarch64-linux-android }
-          - { abi: armeabi-v7a, target: armv7-linux-androideabi }
-          - { abi: x86, target: i686-linux-android }
-          - { abi: x86_64, target: x86_64-linux-android }
     runs-on: ubuntu-latest
     # A release's fast profile builds slower (fewer codegen units, fewer at once: below).
     timeout-minutes: 150
