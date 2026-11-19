@@ -94,15 +94,14 @@ jobs:
           sudo swapon "$where/release.swap"
           free -h
           echo "CARGO_BUILD_JOBS=3" >> "$GITHUB_ENV"
-      # Where build_apk.py keeps its debug key (alias horizon-debug, password android).
-      - name: Unpack the debug key
+      # A committed debug keystore (packaging/android/debug.keystore) so every
+      # build is signed with the same key: updates install over the previous
+      # APK instead of conflicting (no uninstall, no 600 MB re-download).
+      - name: Prepare the debug key
         if: env.RELEASE_BUILD != 'true'
-        env:
-          KEYSTORE: ${{ secrets.STARLING_DEBUG_KEYSTORE_BASE64 }}
         run: |
-          test -n "$KEYSTORE" || exit 0
           mkdir -p target/android
-          echo "$KEYSTORE" | base64 -d > target/android/debug.keystore
+          cp packaging/android/debug.keystore target/android/debug.keystore
       - name: Build the APK
         env:
           ABI: ${{ matrix.abi }}
