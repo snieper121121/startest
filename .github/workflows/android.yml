@@ -102,6 +102,10 @@ jobs:
         run: |
           mkdir -p target/android
           cp packaging/android/debug.keystore target/android/debug.keystore
+      # Force a clean build of the game library: a restored cache can keep
+      # stale wgpu features (e.g. gles-only) after a Cargo.toml change.
+      - name: Clean stale build artifacts
+        run: cargo clean -p horizon-client -p horizon-client-render -p horizon-android 2>/dev/null || true
       - name: Build the APK
         env:
           ABI: ${{ matrix.abi }}
