@@ -69,7 +69,7 @@ jobs:
           cargo install cargo-ndk --version 3.5.4 --locked
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: android-${{ matrix.abi }}
+          shared-key: android-v2-${{ matrix.abi }}
           save-if: ${{ github.ref == 'refs/heads/android' || github.ref == 'refs/heads/starling' }}
       - name: Unpack the release key
         if: env.RELEASE_BUILD == 'true'
