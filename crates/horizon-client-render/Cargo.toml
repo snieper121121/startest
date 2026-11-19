@@ -65,7 +65,7 @@ junction = "1"
 wgpu = { version = "30.0.1", default-features = false, features = ["dx12"] }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-wgpu = { version = "30.0.1", default-features = false, features = ["gles"] }
+wgpu = { version = "30.0.1", default-features = false, features = ["vulkan", "gles", "std", "parking_lot", "wgsl", "naga-ir"] }
 
 [features]
 # Sound output: horizon-client's `audio` feature.
