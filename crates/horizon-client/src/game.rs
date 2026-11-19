@@ -2400,6 +2400,10 @@ struct Game<'a> {
     spawn: Option<Vec3>,
     clock: FixedStep,
     previous_position: Vec3,
+    /// Visual smoothing of server position corrections (setbacks): the
+    /// remaining offset applied to the camera and decayed each frame, so a
+    /// rubber-band snap does not jerk the view. Zero when idle.
+    setback_smooth: [f64; 3],
     /// `yRotO` / `xRotO` of the local player: the view at the start of the tick.
     rope_rot_old: (f32, f32),
     eye: f32,
@@ -15706,6 +15710,27 @@ impl Game<'_> {
         // player's own model stay smooth while the level is frozen.
         let camera_alpha = self.clock.camera_fraction();
         let view = self.camera_view(camera_alpha as f32);
+        // Ease out a server position correction (setback) over several frames
+        // instead of snapping the camera in one: a rubber-band no longer jerks
+        // the view. The offset decays toward zero and is a no-op when idle.
+        if self.setback_smooth[0] != 0.0
+            || self.setback_smooth[1] != 0.0
+            || self.setback_smooth[2] != 0.0
+        {
+            for i in 0..3 {
+                self.view.position[i] += self.setback_smooth[i];
+                self.view.eye[i] += self.setback_smooth[i];
+            }
+            for i in 0..3 {
+                self.setback_smooth[i] *= 0.75;
+            }
+            if self.setback_smooth[0].abs() < 0.001
+                && self.setback_smooth[1].abs() < 0.001
+                && self.setback_smooth[2].abs() < 0.001
+            {
+                self.setback_smooth = [0.0; 3];
+            }
+        }
         let eye = view.map(|_| {
             (
                 glam::DVec3::from_array(self.view.eye),
@@ -18459,6 +18484,16 @@ impl Game<'_> {
                     let between = now.saturating_duration_since(self.frame_end);
                     self.frame_ticks = elapsed.as_secs_f32() * 20.0;
                     self.previous = now;
+                    // Diagnostic: log unusually long gaps between frames even
+                    // without --spikes, so a jittery input (e.g. Bluetooth HID)
+                    // shows up in latest.log. Only very slow frames to stay quiet.
+                    if elapsed.as_millis() > 100 {
+                        log::info!(
+                            "Horizon: long frame gap {} ms (between {} ms) — possible input/frame pacing hitch",
+                            elapsed.as_millis(),
+                            between.as_millis()
+                        );
+                    }
                     // Arrow-key camera controls belong to gameplay; chat and
                     // other screens use the same keys for their own navigation.
                     if self.screen == Screen::Playing
@@ -18972,6 +19007,7 @@ impl<'a> Game<'a> {
             spawn: None,
             clock: FixedStep::default(),
             previous_position: Vec3::ZERO,
+            setback_smooth: [0.0; 3],
             rope_rot_old: (0.0, 10.0),
             eye: 1.62,
             previous_eye: 1.62,

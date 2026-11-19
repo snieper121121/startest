@@ -6136,6 +6136,7 @@ impl Game<'_> {
             Some(player) => {
                 // A short teleport back is a correction: the server would not take the move.
                 let back = player.position.distance(position);
+                let old_position = player.position;
                 let state = format!(
                     "sprinting {}, on ground {}, input {:#04x}",
                     player.sprinting,
@@ -6148,6 +6149,12 @@ impl Game<'_> {
                 {
                     r.setbacks += 1;
                     setback = true;
+                    // Smooth the visual snap: keep the camera's previous
+                    // position so the view eases from the old spot to the
+                    // corrected one instead of jumping in a single frame.
+                    self.setback_smooth[0] += old_position.x - position.x;
+                    self.setback_smooth[1] += old_position.y - position.y;
+                    self.setback_smooth[2] += old_position.z - position.z;
                     if r.setbacks <= 5 || r.setbacks % 50 == 0 {
                         // What tells the causes apart: whether the server took any move (the
                         // last one sent, and when), and which teleport this is.

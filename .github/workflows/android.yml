@@ -12,7 +12,7 @@ name: android
 # STARLING_DEBUG_KEYSTORE_BASE64 (alias horizon-debug, password android); a tag there publishes nothing.
 on:
   push:
-    branches: [android, starling, integration]
+    branches: [android, starling, integration, master]
     tags: ['v*']
   pull_request:
     types: [opened, synchronize, reopened]
