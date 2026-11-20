@@ -17736,7 +17736,7 @@ impl Game<'_> {
                     // below (dialog_drag, station_drag, ...).
                     let (rw, rh) = match &self.renderer {
                         Some(r) => (r.config.width, r.config.height),
-                        None => return,
+                        None => return Ok(()),
                     };
                     let scale = {
                         let limit = horizon_client::hud::GUI_SCALE
