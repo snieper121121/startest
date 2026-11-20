@@ -59,7 +59,38 @@ impl Game<'_> {
             return;
         };
         let device_id = DeviceId::dummy();
-        for event in events {
+        // Coalesce Bluetooth HID event storms: a Bluetooth mouse can deliver
+        // hundreds of tiny Motion/Moved events per frame, each one a full
+        // handle_window_event pass. Fold consecutive Motion deltas and keep
+        // only the last of a run of Moved (absolute) positions, so a frame
+        // processes a handful of events instead of hundreds.
+        let mut coalesced: Vec<crate::android::MouseEvent> = Vec::with_capacity(events.len());
+        for ev in events {
+            match ev {
+                crate::android::MouseEvent::Motion(dx, dy) => {
+                    // Fold into the previous Motion if there is one.
+                    if let Some(crate::android::MouseEvent::Motion(px, py)) =
+                        coalesced.last_mut()
+                    {
+                        *px += dx;
+                        *py += dy;
+                    } else {
+                        coalesced.push(crate::android::MouseEvent::Motion(dx, dy));
+                    }
+                }
+                crate::android::MouseEvent::Moved(x, y) => {
+                    // Replace a previous Moved (keep the latest absolute position).
+                    if let Some(last) = coalesced.last() {
+                        if matches!(last, crate::android::MouseEvent::Moved(_, _)) {
+                            coalesced.pop();
+                        }
+                    }
+                    coalesced.push(crate::android::MouseEvent::Moved(x, y));
+                }
+                other => coalesced.push(other),
+            }
+        }
+        for event in coalesced {
             let event = match event {
                 crate::android::MouseEvent::Moved(x, y) => WindowEvent::CursorMoved {
                     device_id,

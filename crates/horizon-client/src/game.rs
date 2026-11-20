@@ -17264,6 +17264,17 @@ impl Game<'_> {
         if let WindowEvent::KeyboardInput { event, .. } = &event
             && let PhysicalKey::Code(key) = event.physical_key
         {
+            // Bluetooth (and some OS) keyboards emit key-repeat events while a
+            // key is held. Movement is driven by the key's held state, so a
+            // repeat of an already-pressed key only re-runs the whole event
+            // pipeline (screen_key_pressed, mapped_key, trace) for nothing and
+            // stalls the frame. Skip those repeats; the key stays pressed.
+            if event.state == ElementState::Pressed
+                && event.repeat
+                && self.physical_keys.contains(&key)
+            {
+                return;
+            }
             if event.state == ElementState::Pressed {
                 self.physical_keys.insert(key);
                 horizon_client::keybinds::learn_layout(event);
