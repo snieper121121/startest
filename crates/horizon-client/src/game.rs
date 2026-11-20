@@ -17437,8 +17437,23 @@ impl Game<'_> {
             match &event {
                 WindowEvent::CursorMoved { position, .. } => {
                     if let Some(r) = &self.renderer {
-                        let b = HudBatch::new([r.config.width, r.config.height]);
-                        self.cursor = (position.x as f32 / b.scale, position.y as f32 / b.scale);
+                        // Avoid allocating a HudBatch (two Vecs) per cursor
+                        // event: Bluetooth mice fire hundreds of these per
+                        // second and the allocations stall the frame. Only the
+                        // GUI scale is needed here.
+                        let scale = {
+                            let limit = horizon_client::hud::GUI_SCALE
+                                .load(std::sync::atomic::Ordering::Relaxed);
+                            let mut s = 1u32;
+                            while (limit == 0 || s < limit)
+                                && r.config.width / (s + 1) >= 320
+                                && r.config.height / (s + 1) >= 240
+                            {
+                                s += 1;
+                            }
+                            s as f32
+                        };
+                        self.cursor = (position.x as f32 / scale, position.y as f32 / scale);
                     }
                 }
                 WindowEvent::MouseInput {
@@ -17717,9 +17732,20 @@ impl Game<'_> {
                 }
                 WindowEvent::CursorMoved { position, .. } => {
                     if let Some(r) = &self.renderer {
-                        let b = HudBatch::new([r.config.width, r.config.height]);
+                        let scale = {
+                            let limit = horizon_client::hud::GUI_SCALE
+                                .load(std::sync::atomic::Ordering::Relaxed);
+                            let mut s = 1u32;
+                            while (limit == 0 || s < limit)
+                                && r.config.width / (s + 1) >= 320
+                                && r.config.height / (s + 1) >= 240
+                            {
+                                s += 1;
+                            }
+                            s as f32
+                        };
                         let previous = self.cursor;
-                        self.cursor = (position.x as f32 / b.scale, position.y as f32 / b.scale);
+                        self.cursor = (position.x as f32 / scale, position.y as f32 / scale);
                         if self.screen_mouse_dragged(previous) {
                             return Ok(());
                         }
