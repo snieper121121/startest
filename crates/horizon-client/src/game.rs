@@ -17768,6 +17768,7 @@ impl Game<'_> {
                             self.world_options_drag();
                         }
                         if self.screen == Screen::Creative {
+                            let b = HudBatch::new([r.config.width, r.config.height]);
                             let (_, oy) = Self::creative_origin(&b);
                             self.creative_screen.drag_scrollbar(self.cursor.1 - oy);
                         }
@@ -17779,12 +17780,12 @@ impl Game<'_> {
                             self.inventory_drag_move();
                         }
                         if let Some(title) = &mut self.title {
+                            let b = HudBatch::new([r.config.width, r.config.height]);
                             title.drag(self.cursor, (b.width, b.height));
                             title.drag_field(&self.gui.atlas, self.cursor.0);
                         }
                         self.drag_title_player();
                         if self.dragging && self.screen == Screen::Options {
-                            let _ = b;
                             self.options_drag()?;
                         }
                     }
