@@ -17731,63 +17731,65 @@ impl Game<'_> {
                     }
                 }
                 WindowEvent::CursorMoved { position, .. } => {
-                    if let Some(r) = &self.renderer {
-                        let scale = {
-                            let limit = horizon_client::hud::GUI_SCALE
-                                .load(std::sync::atomic::Ordering::Relaxed);
-                            let mut s = 1u32;
-                            while (limit == 0 || s < limit)
-                                && r.config.width / (s + 1) >= 320
-                                && r.config.height / (s + 1) >= 240
-                            {
-                                s += 1;
-                            }
-                            s as f32
-                        };
-                        let previous = self.cursor;
-                        self.cursor = (position.x as f32 / scale, position.y as f32 / scale);
-                        if self.screen_mouse_dragged(previous) {
-                            return Ok(());
+                    // Extract renderer dimensions up front so the immutable
+                    // borrow of `self.renderer` ends before the mutable calls
+                    // below (dialog_drag, station_drag, ...).
+                    let (rw, rh) = match &self.renderer {
+                        Some(r) => (r.config.width, r.config.height),
+                        None => return,
+                    };
+                    let scale = {
+                        let limit = horizon_client::hud::GUI_SCALE
+                            .load(std::sync::atomic::Ordering::Relaxed);
+                        let mut s = 1u32;
+                        while (limit == 0 || s < limit) && rw / (s + 1) >= 320 && rh / (s + 1) >= 240 {
+                            s += 1;
                         }
-                        if self.dialog_open() {
-                            self.dialog_drag();
-                        }
-                        if self.screen == Screen::BlockEditor {
-                            self.block_editor_drag();
-                        }
-                        if self.screen == Screen::Advancements {
-                            self.advancements_drag();
-                        }
-                        if self.screen == Screen::Stats {
-                            self.stats_drag();
-                        }
-                        if self.screen == Screen::DebugOptions {
-                            self.debug_options_drag();
-                        }
-                        if self.screen == Screen::WorldOptions {
-                            self.world_options_drag();
-                        }
-                        if self.screen == Screen::Creative {
-                            let b = HudBatch::new([r.config.width, r.config.height]);
-                            let (_, oy) = Self::creative_origin(&b);
-                            self.creative_screen.drag_scrollbar(self.cursor.1 - oy);
-                        }
-                        if self.screen == Screen::Inventory {
-                            self.station_drag();
-                            self.recipe_book_drag();
-                        }
-                        if matches!(self.screen, Screen::Inventory | Screen::Creative) {
-                            self.inventory_drag_move();
-                        }
-                        if let Some(title) = &mut self.title {
-                            let b = HudBatch::new([r.config.width, r.config.height]);
-                            title.drag(self.cursor, (b.width, b.height));
-                            title.drag_field(&self.gui.atlas, self.cursor.0);
-                        }
-                        self.drag_title_player();
-                        if self.dragging && self.screen == Screen::Options {
-                            self.options_drag()?;
-                        }
+                        s as f32
+                    };
+                    let previous = self.cursor;
+                    self.cursor = (position.x as f32 / scale, position.y as f32 / scale);
+                    if self.screen_mouse_dragged(previous) {
+                        return Ok(());
+                    }
+                    if self.dialog_open() {
+                        self.dialog_drag();
+                    }
+                    if self.screen == Screen::BlockEditor {
+                        self.block_editor_drag();
+                    }
+                    if self.screen == Screen::Advancements {
+                        self.advancements_drag();
+                    }
+                    if self.screen == Screen::Stats {
+                        self.stats_drag();
+                    }
+                    if self.screen == Screen::DebugOptions {
+                        self.debug_options_drag();
+                    }
+                    if self.screen == Screen::WorldOptions {
+                        self.world_options_drag();
+                    }
+                    if self.screen == Screen::Creative {
+                        let b = HudBatch::new([rw, rh]);
+                        let (_, oy) = Self::creative_origin(&b);
+                        self.creative_screen.drag_scrollbar(self.cursor.1 - oy);
+                    }
+                    if self.screen == Screen::Inventory {
+                        self.station_drag();
+                        self.recipe_book_drag();
+                    }
+                    if matches!(self.screen, Screen::Inventory | Screen::Creative) {
+                        self.inventory_drag_move();
+                    }
+                    if let Some(title) = &mut self.title {
+                        let b = HudBatch::new([rw, rh]);
+                        title.drag(self.cursor, (b.width, b.height));
+                        title.drag_field(&self.gui.atlas, self.cursor.0);
+                    }
+                    self.drag_title_player();
+                    if self.dragging && self.screen == Screen::Options {
+                        self.options_drag()?;
                     }
                 }
                 WindowEvent::MouseWheel { delta, .. } => {
